@@ -1,81 +1,105 @@
-# Enterprise Fraud Detection & Behavioral Risk Analytics Pipeline
+# Fraud Detection & Risk Scoring Pipeline
 
 ## Project Overview
-This repository contains an end-to-end data science pipeline designed to ingest transactional ledgers, isolate behavioral features, remediate data leakage, train an ensemble Machine Learning classifier, and deliver a live business intelligence operational dashboard.
 
-* **Data Source:** [Kaggle Fraud Detection Transactions Dataset (by Samay Ashar)](https://www.kaggle.com/datasets/samayashar/fraud-detection-transactions-dataset)
-* **Dataset Scale:** 50,000 recorded transaction events mapping 21 historical, financial, and digital attributes.
-* **Core Technology Stack:** Python (Pandas, NumPy, Scikit-Learn), Power BI Desktop, Jupyter Notebook architecture.
+This project builds an end-to-end machine learning pipeline to detect fraudulent payment transactions. It covers the full data science workflow — from raw data ingestion and cleaning, through feature engineering and model training, to a business-facing Power BI dashboard that makes the results actionable.
 
----
+This project was built to mirror real-world challenges in payment fraud detection, directly relevant to fintech environments where reducing false declines and catching genuine fraud both matter.
 
-## System Architecture & Workflow Blueprint
-
-The engineering pipeline follows a strict modular production framework:
-
-1. **Ingestion & Integrity Profiling:** Ingesting the data structure, diagnosing null spaces, and running structural class balance checks.
-2. **Feature Engineering & Pruning:** * Stripping tracking indices (`Transaction_ID`, `User_ID`) to mitigate high-cardinality parametric overfitting.
-    * Parsing mixed object strings into active `datetime64` objects to isolate cyclical `Hour_of_Day` (0–23) variables—capturing midnight automation attack windows.
-3. **Categorical Matrix Processing:** Executing One-Hot Encoding across multiple nominal dimensions (`Device_Type`, `Location`, `Transaction_Type`, `Merchant_Category`, `Card_Type`, `Authentication_Method`).
-4. **Data Leakage Rectification:** Systematically detecting and purging the pre-calculated `Risk_Score` feature vector to prevent operational model cheating.
-5. **Model Training & Evaluation:** Training a balanced Scikit-Learn Random Forest Classifier on an 80/20 stratified validation split.
-6. **Downstream Business Layer:** Exporting clean analytical layers for executive visualization.
+- **Data Source:** [Kaggle — Fraud Detection Transactions Dataset by Samay Ashar](https://www.kaggle.com/datasets/samayashar/fraud-detection-transactions-dataset)
+- **Dataset Size:** 50,000 transactions, 21 features per record
+- **Tech Stack:** Python (Pandas, NumPy, scikit-learn), Jupyter Notebook, Power BI Desktop
 
 ---
 
-## Machine Learning Model Performance Report Card
+## How the Pipeline Works
 
-After successfully eliminating systemic data leakage (`Risk_Score`), the ensemble model was evaluated against completely unseen test data. The Random Forest engine (`class_weight='balanced'`) yielded highly robust, realistic performance metrics:
+The project follows a clear, step-by-step workflow:
+
+### 1. Data Ingestion & Inspection
+Load the raw dataset and profile its structure — checking column types, identifying missing values, and understanding the class balance between genuine and fraudulent transactions.
+
+### 2. Data Cleaning & Feature Engineering
+- Removed `Transaction_ID` and `User_ID` — these are unique row identifiers with no predictive value; keeping them would cause the model to memorise rather than learn
+- Parsed timestamps from mixed string formats into proper datetime objects
+- Extracted `Hour_of_Day` (0–23) as a numerical feature — transaction timing is a meaningful fraud signal
+- Dropped the original timestamp column after extraction
+
+### 3. Encoding Categorical Variables
+Converted text-based columns (`Device_Type`, `Location`, `Transaction_Type`, `Merchant_Category`, `Card_Type`, `Authentication_Method`) into numerical binary flags using one-hot encoding, which is required for scikit-learn models to process them.
+
+### 4. Fixing Data Leakage
+The raw dataset included a `Risk_Score` column — a pre-calculated fraud score that would give the model access to information it wouldn't have in a real deployment. This was identified and removed before training. The model was then retrained on genuine behavioural features only, giving a realistic view of performance.
+
+### 5. Model Training
+Trained a Random Forest Classifier on an 80/20 train-test split. The `stratify` parameter was used to ensure both splits maintained the same fraud-to-genuine ratio. `class_weight='balanced'` was applied to prevent the model from ignoring the minority fraud class.
+
+### 6. Exporting for Visualisation
+The cleaned dataset was exported as a CSV for loading into Power BI to build the business dashboard.
+
+---
+
+## Model Results
+
+The model was evaluated on 10,000 unseen transactions after removing the leaking `Risk_Score` column:
 
 | Class | Precision | Recall | F1-Score | Support |
-| :--- | :--- | :--- | :--- | :--- |
-| **0 (Genuine)** | 0.85 | 1.00 | 0.92 | 6787 |
-| **1 (Fraud)** | 1.00 | 0.62 | 0.76 | 3213 |
-| **Accuracy** | | | **0.88** | 10000 |
-| **Macro Avg** | 0.92 | 0.81 | 0.84 | 10000 |
-| **Weighted Avg** | 0.90 | 0.88 | 0.87 | 10000 |
+|:---|:---|:---|:---|:---|
+| **0 — Genuine** | 0.85 | 1.00 | 0.92 | 6,787 |
+| **1 — Fraud** | 1.00 | 0.62 | 0.76 | 3,213 |
+| **Overall Accuracy** | | | **0.88** | 10,000 |
+| **Macro Average** | 0.92 | 0.81 | 0.84 | 10,000 |
 
-### Strategic Metric Translation:
-* **Fraud Precision (1.00 / 100%):** Out of all transactions flagged by the system as malicious, exactly 100% were true positive fraud events. This equates to a **0% False Positive Rate**, guaranteeing that genuine cardholders never experience accidental transaction declines or checkout friction.
-* **Fraud Recall (0.62 / 62%):** The model effectively traps and blocks 62% of all active fraud vectors relying exclusively on customer behavioral footprints (transaction velocity, purchase categories, location shifts, and device signatures).
-* **Macro Average F1-Score (0.84):** Reflects highly stable and mathematically sound predictive power across both highly imbalanced classification targets.
+### What these numbers mean in plain terms
 
----
-
-## Executive Fraud Operations Dashboard (Power BI)
-
-To translate raw algorithmic predictions into active business logic, a comprehensive business intelligence tracking layer was connected to the engineered backend data layer:
-
-![Executive Fraud Operations Dashboard](dashboard_preview.png)
-
-### Key Operational Components Built:
-1. **The 24-Hour Fraud Threat Index:** A time-series distribution line tracking fraud volume by hour of day, pinpointing operational attack windows when manual merchant reviews are offline.
-2. **Geographic Distribution Matrix:** A comparative geographic mapping visual detailing regional fraud density and velocity concentrations across global hubs.
-3. **Authentication & Merchant Vector Analysis:** Interactive charts pinpointing breakdown rates across transaction types, card types, and digital authentication channels used by active fraud pools.
+- **Fraud Precision — 100%:** Every transaction the model flagged as fraud was genuinely fraudulent. There were zero false positives — meaning no legitimate customer transactions would have been incorrectly blocked.
+- **Fraud Recall — 62%:** The model correctly caught 62% of all actual fraud cases using only behavioural signals (time of day, device type, merchant category, location, card type, authentication method). This is a realistic baseline without any pre-scored risk features.
+- **Note:** The 100% precision figure reflects characteristics of this specific dataset. In a live production environment, some false positives would be expected and the threshold would be tuned based on the business's tolerance for blocking genuine transactions vs. missing fraud.
 
 ---
 
-## How to Execute the Pipeline Standalone
+## Power BI Dashboard
 
-### 1. Environment Setup
-Ensure an active Python 3.x core environment is established with the baseline statistical dependencies:
+The cleaned output data was connected to Power BI Desktop to build an operational fraud monitoring dashboard.
+
+![Dashboard Preview](dashboard_preview.png)
+
+### What the dashboard shows
+
+1. **Fraud by Hour of Day** — A line chart showing when fraud peaks across a 24-hour window, useful for scheduling manual review teams
+2. **Geographic Fraud Distribution** — A map visual showing which regions show higher fraud concentrations
+3. **Fraud by Authentication Method & Merchant Category** — Bar charts breaking down which transaction types and authentication channels are most associated with fraud attempts
+
+---
+
+## Running This Project Yourself
+
+### Step 1 — Install dependencies
 
 ```bash
 pip install pandas numpy scikit-learn
 ```
 
-### 2. Sourcing Data
-Download the raw database ledger directly from Kaggle. Place the target file inside your local root directory and name it `fraud_dataset.csv`.
+### Step 2 — Get the data
 
-### 3. Execution
-Run the end-to-end engineering and predictive modeling script directly via your terminal:
+Download the dataset from [Kaggle](https://www.kaggle.com/datasets/samayashar/fraud-detection-transactions-dataset), place it in the project root folder, and name it `fraud_dataset.csv`.
+
+### Step 3 — Run the pipeline
 
 ```bash
 python fraud_risk_pipeline.py
 ```
 
-Upon successful execution, the script will output the classification report directly to your console and export `cleaned_fraud_visualization.csv` for dashboard loading.
+This will print the model evaluation report to your terminal and save `cleaned_fraud_visualization.csv` to your project folder for use in the dashboard.
 
 ---
 
-*Developed as a data science portfolio project.*
+## Why This Project Matters
+
+Clean, trusted data is the foundation of any reliable ML system. A fraud model built on leaky or poorly prepared data will perform well in testing but fail in production — a costly mistake in a payments context. This project deliberately identifies and fixes a data leakage issue to demonstrate that awareness.
+
+The goal was not just to build a model, but to build one that could be explained to a business stakeholder and trusted in a real environment.
+
+---
+
+*Built as a data science portfolio project | Tools: Python · scikit-learn · Pandas · Power BI*
