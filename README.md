@@ -1,4 +1,4 @@
-# Fraud Detection & Risk Scoring Pipeline
+# Enterprise Fraud Detection & Behavioral Risk Analytics Pipeline
 
 ## Project Overview
 
